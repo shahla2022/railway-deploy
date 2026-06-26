@@ -6,18 +6,24 @@ from insightface.app import FaceAnalysis
 from numpy.linalg import norm
 from fastapi.middleware.cors import CORSMiddleware
 # Initialize model
-face_app = FaceAnalysis(name="buffalo_l")  
-face_app.prepare(ctx_id=0)  
+# face_app = FaceAnalysis(name="buffalo_l")  
+# face_app.prepare(ctx_id=0)  
 
 app = FastAPI()
-
+face_app = None
 def read_image(file: UploadFile):
     img = np.frombuffer(file.file.read(), np.uint8)
     img = cv2.imdecode(img, cv2.IMREAD_COLOR)
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+def get_face_app():
+    global face_app
+    if face_app is None:
+        from insightface.app import FaceAnalysis
+        face_app = FaceAnalysis()
+        face_app.prepare(ctx_id=-1)  # برای deploy
+    return face_app
 
-app = FastAPI()
 
 allow_origins=["*"]
 
@@ -33,46 +39,80 @@ face_app.prepare(ctx_id=0)
 
 
  
+# @app.post("/compare")
+# async def compare_faces(file1: UploadFile = File(...), file2: UploadFile = File(...)):
+#     img1_bytes = await file1.read()
+#     img2_bytes = await file2.read()
+
+#     img1 = cv2.imdecode(np.frombuffer(img1_bytes, np.uint8), cv2.IMREAD_COLOR)
+#     img2 = cv2.imdecode(np.frombuffer(img2_bytes, np.uint8), cv2.IMREAD_COLOR)
+
+#     faces1 = face_app.get(img1)
+#     faces2 = face_app.get(img2)
+    
+
+#     if not faces1 or not faces2:
+#         return {"match": False, "reason": "No face detected"}
+
+#     emb1 = faces1[0]['embedding']
+#     emb2 = faces2[0]['embedding']
+#     emb1 = emb1 / np.linalg.norm(emb1)
+#     emb2 = emb2 / np.linalg.norm(emb2)
+#     distance = np.linalg.norm(emb1 - emb2)
+
+#     threshold = 1.1
+#     similarity = np.dot(emb1, emb2)
+    
+#     # similarity_percent = float(np.clip(similarity, 0, 1)) * 100
+#     # similarity_percent = ((cosine_similarity + 1) / 2) * 100
+
+#     # distance = 1 - similarity 
+#     similarity_percent = ((similarity + 1) / 2) * 100
+#     print("sim: " , similarity_percent)
+#     per = 72.5
+#     return {
+#         # "match": bool(distance < threshold),
+#         "tip": "the threshold of similarity is % 72.5, you can change and handle it in your app ",
+#         "match": bool(similarity_percent > per),
+#         # "distance": float(distance),
+#         "similarity_percent": float(similarity_percent)
+#     }
+
+
+
+
 @app.post("/compare")
 async def compare_faces(file1: UploadFile = File(...), file2: UploadFile = File(...)):
+    face_app = get_face_app()
+
     img1_bytes = await file1.read()
     img2_bytes = await file2.read()
 
     img1 = cv2.imdecode(np.frombuffer(img1_bytes, np.uint8), cv2.IMREAD_COLOR)
     img2 = cv2.imdecode(np.frombuffer(img2_bytes, np.uint8), cv2.IMREAD_COLOR)
 
+    if img1 is None or img2 is None:
+        return {"match": False, "reason": "invalid image"}
+
     faces1 = face_app.get(img1)
     faces2 = face_app.get(img2)
-    
 
     if not faces1 or not faces2:
-        return {"match": False, "reason": "No face detected"}
+        return {"match": False, "reason": "no face detected"}
 
     emb1 = faces1[0]['embedding']
     emb2 = faces2[0]['embedding']
+
     emb1 = emb1 / np.linalg.norm(emb1)
     emb2 = emb2 / np.linalg.norm(emb2)
-    distance = np.linalg.norm(emb1 - emb2)
 
-    threshold = 1.1
     similarity = np.dot(emb1, emb2)
-    
-    # similarity_percent = float(np.clip(similarity, 0, 1)) * 100
-    # similarity_percent = ((cosine_similarity + 1) / 2) * 100
-
-    # distance = 1 - similarity 
     similarity_percent = ((similarity + 1) / 2) * 100
-    print("sim: " , similarity_percent)
-    per = 72.5
+
     return {
-        # "match": bool(distance < threshold),
-        "tip": "the threshold of similarity is % 72.5, you can change and handle it in your app ",
-        "match": bool(similarity_percent > per),
-        # "distance": float(distance),
+        "match": similarity_percent > 72.5,
         "similarity_percent": float(similarity_percent)
     }
-
-
 
 
 
