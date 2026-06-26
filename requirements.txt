@@ -65,7 +65,7 @@ idna==3.7
 imageio==2.37.0
 imgaug==0.4.0
 importlib_metadata==8.7.0
-insightface @ file:///D:/linux-server-myid/inux-server-myid/facematch/insightface-0.7.3-cp310-cp310-win_amd64.whl
+insightface
 ipykernel==6.30.1
 ipython==8.37.0
 jedi==0.19.2
