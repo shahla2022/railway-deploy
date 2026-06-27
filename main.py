@@ -11,6 +11,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 face_app = None
+allow_origins=["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,          
+    allow_credentials=True,
+    allow_methods=["*"],             
+    allow_headers=["*"],            
+)
+face_app = FaceAnalysis(name="buffalo_l")
+face_app.prepare(ctx_id=0)  
 def read_image(file: UploadFile):
     img = np.frombuffer(file.file.read(), np.uint8)
     img = cv2.imdecode(img, cv2.IMREAD_COLOR)
@@ -25,17 +36,7 @@ def get_face_app():
     return face_app
 
 
-allow_origins=["*"]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allow_origins,          
-    allow_credentials=True,
-    allow_methods=["*"],             
-    allow_headers=["*"],            
-)
-face_app = FaceAnalysis(name="buffalo_l")
-face_app.prepare(ctx_id=0)  
 
 
  
